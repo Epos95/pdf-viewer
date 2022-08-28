@@ -13,6 +13,8 @@ use crate::routes::{
     static_path::static_path,
 };
 
+// TODO: Come up with a scheme for persistence via json
+
 // NOTES:
 // Use askama for templating (necessary for start page and the pdf viewing page)
 //   https://github.com/djc/askama/blob/main/askama_axum/tests/basic.rs
@@ -24,7 +26,14 @@ use crate::routes::{
  * Someone gets the indexing page which just lists all the pdfs
  *   (this site could also show which pdfs are already open *where*) 
  * User requests one of the pdfs, gets taken to the generic viewing page 
+ * 
+ * so for basic functionality we need to keep track of 
+ * ALL PDFs and where the users last where in them
+ * for more advanced functionality we need to keep track of 
+ * individual computers to make sure that we dont get issues with syncronization
+ * 
  */
+
 
 #[tokio::main]
 async fn main() -> Result<(), hyper::Error> {
