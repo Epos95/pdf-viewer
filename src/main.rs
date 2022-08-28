@@ -6,6 +6,12 @@ use tower_http::{trace::TraceLayer};
 use tracing::{metadata::LevelFilter};
 
 mod routes;
+use crate::routes::{
+    main_page::main_page,
+    view_pdf::view_pdf,
+    get_pdf::get_pdf,
+    static_path::static_path,
+};
 
 // NOTES:
 // Use askama for templating (necessary for start page and the pdf viewing page)
@@ -43,10 +49,10 @@ async fn main() -> Result<(), hyper::Error> {
 
     let app = Router::new()
         .layer(TraceLayer::new_for_http())
-        .route("/", get(routes::main_page))
-        .route("/static/:path", get(routes::static_path))
-        .route("/view/:pdf", get(routes::view_pdf))
-        .route("/get_pdf/:pdf", get(routes::get_pdf));
+        .route("/", get(main_page))
+        .route("/static/:path", get(static_path))
+        .route("/view/:pdf", get(view_pdf))
+        .route("/get_pdf/:pdf", get(get_pdf));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
 
