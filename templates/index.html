@@ -11,7 +11,7 @@
 	<h3>wow nice index man</h3>
 	{% for pdf in pdfs %}
 		<div class="pdf">
-			<a href="view/{{pdf.split('\\').last().unwrap()}}">{{pdf.split('\\').last().unwrap().split('.').next().unwrap()}}</a>
+			<a href="view/{{pdf.split('/').last().unwrap()}}">{{pdf.split('/').last().unwrap().split('.').next().unwrap()}}</a>
 		</div>
 	{% endfor %}
 </body>

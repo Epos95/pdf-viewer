@@ -1,5 +1,9 @@
-use axum::{extract::Path, response::{IntoResponse, Response}, body::{Empty, self, Full}};
-use http::{StatusCode, header, HeaderValue};
+use axum::{
+    body::{self, Empty, Full},
+    extract::Path,
+    response::{IntoResponse, Response},
+};
+use http::{header, HeaderValue, StatusCode};
 use include_dir::{include_dir, Dir};
 use tracing::debug;
 
@@ -7,7 +11,6 @@ use tracing::debug;
 pub async fn static_path(Path(path): Path<String>) -> impl IntoResponse {
     static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static");
     debug!("giving static path: {path}");
-
 
     let path = path.trim_start_matches('/');
     let mime_type = mime_guess::from_path(path).first_or_text_plain();
