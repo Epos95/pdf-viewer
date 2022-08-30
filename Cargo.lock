@@ -534,6 +534,8 @@ dependencies = [
  "hyper",
  "include_dir",
  "mime_guess",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-util",
  "tower-http",

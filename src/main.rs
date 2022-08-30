@@ -1,13 +1,18 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-use axum::{routing::get, Extension, Router};
+use axum::{
+    routing::{get, post},
+    Extension, Router,
+};
 use clap::{arg, command};
+use routes::status::status;
 use tokio::sync::Mutex;
 use tracing::metadata::LevelFilter;
 
 mod routes;
 use crate::routes::{
-    get_pdf::get_pdf, main_page::main_page, static_path::static_path, view_pdf::view_pdf, prev::prev, next::next,
+    get_pdf::get_pdf, main_page::main_page, next::next, prev::prev, set_page::set_page,
+    static_path::static_path, view_pdf::view_pdf,
 };
 
 // TODO: Come up with a scheme for persistence via json
@@ -86,6 +91,23 @@ use crate::routes::{
 //
 // actually this doesnt work without some way to separate the laptop from the desktop, what if we want to go back a page on desktop?
 // the server will see this as a request coming from someone who is one page behind and thus not let you...
+//
+//
+// OKAY FINAL THING
+// so desktop goes idle at page 150. laptop picks it up and moves the server state to 300
+// after this desktop reconnects with the page still at 150, at this point the server just sees a
+// new connection trying to access a page faaar back, the client knows this because the server has a "status"
+// route for a certain book which returns its current page and asks the user if it really wants to stay at 150
+// or jump to 300
+//
+// This requires:
+// overhaul of next methods,
+// a "set-page" route (maybe to replace next and prev)
+// a status route
+//
+// all of this also plays nicely with the need for a "goto page" option
+// make the "set-page" route into post and you can even pass along a token
+// given from "/view/:pdf" route
 
 /// HashMap translating a title to the page number stored for that book.
 pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
@@ -95,6 +117,7 @@ async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         // TODO: Arg which specifies location of pdfs at start-time
+        // TODO: Optional arg which specifies port
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -112,9 +135,7 @@ async fn main() -> Result<(), hyper::Error> {
     tracing::subscriber::set_global_default(sub).unwrap();
 
     let mut h = HashMap::new();
-    h.insert(
-        "bok.pdf".to_string(),
-        1);
+    h.insert("bok.pdf".to_string(), 1);
     // TODO: populate the state handler from the stored json file on startup
     let state_handler: ContentState = Arc::new(Mutex::new(h));
 
@@ -124,7 +145,9 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf", get(view_pdf))
         .route("/view/:pdf/next_page", get(next))
         .route("/view/:pdf/prev_page", get(prev))
+        .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
+        .route("/status/:pdf", get(status))
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

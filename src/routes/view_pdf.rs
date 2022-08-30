@@ -1,6 +1,8 @@
+use std::time::SystemTime;
+
 use askama::Template;
 use axum::{extract::Path, response::IntoResponse, Extension};
-use tracing::{debug, info, error};
+use tracing::{debug, error, info};
 
 use crate::ContentState;
 
@@ -17,10 +19,12 @@ pub async fn view_pdf(
     Path(pdf): Path<String>,
     Extension(book_state): Extension<ContentState>,
 ) -> impl IntoResponse {
-    // *pass through the auth layer*
     // get state for that pdf
     // construct the template
     // return the template
+
+    // unused for now...
+    let token = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_micros().to_string();
 
     let guard = book_state.lock().await;
     let cur_page_number = match guard.get(&pdf) {
@@ -34,7 +38,7 @@ pub async fn view_pdf(
 
     info!("Someone is trying to view {pdf}");
     let template = ViewPDFTemplate {
-        token: String::from("token here!"),
+        token,
         pdf_name: pdf,
         cur_page_number,
     };

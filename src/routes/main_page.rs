@@ -11,7 +11,6 @@ struct MainTemplate {
 }
 
 /// Method for getting the main/startup page.
-//pub async fn main_page(Extension(state): Extension<ContentState>) -> impl IntoResponse {
 pub async fn main_page(Extension(book_state): Extension<ContentState>) -> impl IntoResponse {
     let mut paths = fs::read_dir("content")
         .await
