@@ -1,4 +1,5 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, fs::OpenOptions, net::SocketAddr, process::exit, sync::Arc};
+use tokio::time::Duration;
 
 use axum::{
     routing::{get, post},
@@ -6,19 +7,21 @@ use axum::{
 };
 use clap::{arg, command};
 use routes::status::status;
-use tokio::sync::Mutex;
-use tracing::metadata::LevelFilter;
+use tokio::{spawn, sync::Mutex, time::sleep};
+use tracing::{error, metadata::LevelFilter};
 
 mod routes;
 use crate::routes::{
-    get_pdf::get_pdf, main_page::main_page, set_page::set_page,
-    static_path::static_path, view_pdf::view_pdf,
+    get_pdf::get_pdf, main_page::main_page, set_page::set_page, static_path::static_path,
+    view_pdf::view_pdf,
 };
+
+mod persistence;
 
 // TODO: Come up with a scheme for persistence via json
 
 // NOTES:
-// Use askama for templating (necessary for start page and the pdf viewing page)
+// Use askama for templating (necessary for start page and the pdf viewin&g page)
 //   https://github.com/djc/askama/blob/main/askama_axum/tests/basic.rs
 // To keep track of which pages are open where there should probably be
 //  a session system or something (cookies :eyes:)
@@ -134,10 +137,27 @@ async fn main() -> Result<(), hyper::Error> {
 
     tracing::subscriber::set_global_default(sub).unwrap();
 
-    let mut h = HashMap::new();
-    h.insert("bok.pdf".to_string(), 1);
-    // TODO: populate the state handler from the stored json file on startup
+    // TODO: Convert this to tokio::OpenOptions eventually
+    let fd = OpenOptions::new()
+        .read(true)
+        .open("state.json")
+        .expect("Failed to open state.json!");
+
+    let h: HashMap<String, u16> = serde_json::from_reader(fd).expect("Could not parse state.json!");
+    // TODO: populate the state handler from the stored json file on startup instead
     let state_handler: ContentState = Arc::new(Mutex::new(h));
+
+    // spawn persistence
+    let dummy = state_handler.clone();
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::new(2, 0)).await;
+            if let Err(e) = persistence::sync_state(dummy.clone()).await {
+                error!("Failed to run persistence: {e:?}");
+                exit(0);
+            }
+        }
+    });
 
     let app = Router::new()
         .route("/", get(main_page))

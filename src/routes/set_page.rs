@@ -1,7 +1,6 @@
-
 use axum::{extract::Path, response::IntoResponse, Extension, Json};
 use serde::{Deserialize, Serialize};
-use tracing::{error, debug, info};
+use tracing::{debug, error, info};
 
 use crate::ContentState;
 
@@ -18,14 +17,13 @@ pub async fn set_page(
     Json(json): Json<SetPageData>,
     Extension(content_state): Extension<ContentState>,
 ) -> impl IntoResponse {
-    
     let mut g = content_state.lock().await;
     debug!("Setting page to {} for {}", json.new_page, json.pdf_name);
 
     match g.get_mut(&pdf) {
         Some(n) => {
             *n = json.new_page;
-        },
+        }
         None => {
             error!("Request for prev on non-existent content: {pdf}");
             return Err("Request for prev on non-existent content: {pdf}");

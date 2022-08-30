@@ -24,7 +24,11 @@ pub async fn view_pdf(
     // return the template
 
     // unused for now...
-    let token = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_micros().to_string();
+    let token = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_micros()
+        .to_string();
 
     let guard = book_state.lock().await;
     let cur_page_number = match guard.get(&pdf) {
