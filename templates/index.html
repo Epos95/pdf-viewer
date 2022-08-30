@@ -6,12 +6,14 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Document</title>
 	<link rel="stylesheet" href="static/index.css">
+	<link href='https://fonts.googleapis.com/css?family=Fira Code' rel='stylesheet'>
 </head>
 <body>
 	<h3>wow nice index man</h3>
 	{% for pdf in pdfs %}
 		<div class="pdf">
-			<a href="view/{{pdf.split('/').last().unwrap()}}">{{pdf.split('/').last().unwrap().split('.').next().unwrap()}}</a>
+			<a href="view/{{pdf.0}}">{{pdf.0.split('.').next().unwrap()}}</a>
+			<span>Page: {{pdf.1}}<span>
 		</div>
 	{% endfor %}
 </body>

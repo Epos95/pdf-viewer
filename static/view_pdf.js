@@ -140,3 +140,16 @@ pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
     // Initial/first page rendering
     renderPage(pageNum);
 });
+
+document.onkeydown = checkKey;
+function checkKey(e) {
+    e = e || window.event;
+
+    if (e.keyCode == '37') {
+        onPrevPage();
+    }
+    else if (e.keyCode == '39') {
+        onNextPage();
+    }
+
+}
