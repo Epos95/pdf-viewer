@@ -11,7 +11,7 @@ use tracing::metadata::LevelFilter;
 
 mod routes;
 use crate::routes::{
-    get_pdf::get_pdf, main_page::main_page, next::next, prev::prev, set_page::set_page,
+    get_pdf::get_pdf, main_page::main_page, set_page::set_page,
     static_path::static_path, view_pdf::view_pdf,
 };
 
@@ -143,8 +143,6 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/", get(main_page))
         .route("/static/:path", get(static_path))
         .route("/view/:pdf", get(view_pdf))
-        .route("/view/:pdf/next_page", get(next))
-        .route("/view/:pdf/prev_page", get(prev))
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
