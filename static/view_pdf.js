@@ -71,16 +71,7 @@ function onPrevPage() {
         return;
     }
 
-    fetch(window.location.href + "/prev_page").then(function(response) {
-        return response.json();
-    }).then(function(data) {
-        console.log(data);
-    }).catch(function() {
-        console.log("Booo");
-    });
-
-    pageNum--;
-    queueRenderPage(pageNum);
+    set_page("-");
 }
 document.getElementById('prev').addEventListener('click', onPrevPage);
 
@@ -92,6 +83,11 @@ function onNextPage() {
         return;
     }
 
+    set_page("+");
+}
+document.getElementById('next').addEventListener('click', onNextPage);
+
+function set_page(direction) {
     var dest = "http://" + window.location.host + "/status/"+pdf_name;
     fetch(dest).then(function(response) {
         return response.json();
@@ -104,13 +100,18 @@ function onNextPage() {
             return;
         }
 
-        // This if statement needs more work
         if (pageNum != server_page) {
-            if (confirm("Desynced!\nJump to the page stored remotely?")) {
+            if (confirm("Desynced!\nJump to the page stored remotely?\n(local is at page: " + pageNum + ", server is at page: " + server_page + ")")) {
                 pageNum = data;
             }
         }
-        pageNum++;
+
+        if (direction == "+") {
+            pageNum++;
+        } else {
+            pageNum--;
+        }
+
         var dest = "http://"+window.location.host+"/view/"+pdf_name+"/set_page";
         fetch(dest, {
             method: "POST",
@@ -126,23 +127,7 @@ function onNextPage() {
         console.log("Booo");
         console.log(e);
     });
-}
-document.getElementById('next').addEventListener('click', onNextPage);
 
-function set_page(page) {
-    // check if page is adjacent to server page
-    // if not:
-    //    popup and ask user if they want to overwrite or proceed as normal
-    // else:
-    //    set the page number to page
-
-    fetch(window.location).then(function(response) {
-        return response.json();
-    }).then(function(data) {
-        console.log(data);
-    }).catch(function() {
-        console.log("Booo");
-    });
 }
 
 /**
