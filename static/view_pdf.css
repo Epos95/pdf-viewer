@@ -16,4 +16,7 @@ body {
 
 #the-canvas {
     border: 1px black solid;
+    margin: auto;
+    display: flex;
+    justify-content: center; /* for horizontal */
 }
