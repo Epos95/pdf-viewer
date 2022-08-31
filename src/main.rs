@@ -25,8 +25,8 @@ pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
+        .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
         // TODO: Arg which specifies location of pdfs at start-time
-        // TODO: Optional arg which specifies port
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -43,6 +43,11 @@ async fn main() -> Result<(), hyper::Error> {
 
     tracing::subscriber::set_global_default(sub).unwrap();
 
+    let port = matches.get_one::<String>("port")
+        .unwrap_or(&3000.to_string())
+        .parse::<u64>()
+        .expect("Invalid argument!");
+
     // TODO: Convert this to tokio::OpenOptions eventually
     let fd = OpenOptions::new()
         .read(true)
@@ -50,7 +55,6 @@ async fn main() -> Result<(), hyper::Error> {
         .expect("Failed to open state.json!");
 
     let h: HashMap<String, u16> = serde_json::from_reader(fd).expect("Could not parse state.json!");
-    // TODO: populate the state handler from the stored json file on startup instead
     let state_handler: ContentState = Arc::new(Mutex::new(h));
 
     // spawn persistence
@@ -74,7 +78,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/status/:pdf", get(status))
         .layer(Extension(state_handler));
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
