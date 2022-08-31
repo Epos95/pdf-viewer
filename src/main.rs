@@ -45,7 +45,7 @@ async fn main() -> Result<(), hyper::Error> {
 
     let port = matches.get_one::<String>("port")
         .unwrap_or(&3000.to_string())
-        .parse::<u64>()
+        .parse::<u16>()
         .expect("Invalid argument!");
 
     // TODO: Convert this to tokio::OpenOptions eventually
