@@ -4,6 +4,16 @@
     color: #ebdbb2;
 }
 
+button {
+    background-color: #b16286;
+    border: none;
+    box-shadow: 10px 10px 10px grey;
+}
+
 body {
     background-color: #292929;
+}
+
+#the-canvas {
+    border: 1px black solid;
 }

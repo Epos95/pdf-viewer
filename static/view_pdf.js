@@ -1,5 +1,5 @@
-const token = "{{token}}";
-console.log("token: " + token);
+
+// TODO: update this thing!
 var url = "http://localhost:3000/get_pdf/"+pdf_name;
 
 // Loaded via <script> tag, create shortcut to access PDF.js exports.
@@ -13,6 +13,7 @@ var pageNum = parseInt(window.pdf_page);
 var pdf_name = window.pdf_name;
 var pageRendering = false;
 var pageNumPending = null;
+// TODO: scaling so that phones dont get shafted
 var scale = 1.2;
 var canvas = document.getElementById('the-canvas');
 var ctx = canvas.getContext('2d');
@@ -28,10 +29,13 @@ function renderPage(num) {
         var viewport = page.getViewport({scale: scale});
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+        canvas.width *= 1.1
 
         // Render PDF page into canvas context
         var renderContext = {
             canvasContext: ctx,
+            // transparent background, doesnt look that good tho...
+            // background: 'rgba(0,0,0,0)',
             viewport: viewport
         };
         var renderTask = page.render(renderContext);
