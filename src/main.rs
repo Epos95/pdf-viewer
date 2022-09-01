@@ -7,7 +7,7 @@ use axum::{
 };
 use clap::{arg, command};
 use routes::status::status;
-use tokio::{spawn, sync::Mutex, time::sleep};
+use tokio::{sync::Mutex, time::sleep};
 use tracing::{error, metadata::LevelFilter};
 
 mod routes;
@@ -26,6 +26,7 @@ async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
+        .arg(arg!([dir] "Which directory to host (defaults to \"contents\")"))
         // TODO: Arg which specifies location of pdfs at start-time
         .get_matches();
 
@@ -48,6 +49,10 @@ async fn main() -> Result<(), hyper::Error> {
         .parse::<u16>()
         .expect("Invalid argument!");
 
+    let directory = matches.get_one::<String>("dir")
+        .unwrap_or(&"content".to_string())
+        .to_owned();
+
     // TODO: Convert this to tokio::OpenOptions eventually
     let fd = OpenOptions::new()
         .read(true)
@@ -59,10 +64,11 @@ async fn main() -> Result<(), hyper::Error> {
 
     // spawn persistence
     let dummy = state_handler.clone();
+    let dir = directory.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) = persistence::sync_state(dummy.clone()).await {
+            if let Err(e) = persistence::sync_state(dir.clone(), dummy.clone()).await {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
             }
@@ -76,6 +82,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
+        .layer(Extension(directory))
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
