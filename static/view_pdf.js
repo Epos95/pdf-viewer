@@ -12,7 +12,7 @@ var pageNum = parseInt(window.pdf_page);
 var pdf_name = window.pdf_name;
 var pageRendering = false;
 var pageNumPending = null;
-// TODO: scaling so that phones dont get shafted
+// TODO: better scaling so that phones dont get shafted
 var scale = 1.2;
 var canvas = document.getElementById('the-canvas');
 var ctx = canvas.getContext('2d');
