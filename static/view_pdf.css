@@ -20,3 +20,18 @@ body {
     display: flex;
     justify-content: center; /* for horizontal */
 }
+.button_container {
+    padding-bottom: 2%;
+    margin: auto;
+    display: flex;
+    justify-content: center; /* for horizontal */
+}
+
+#prev {
+    margin-right: 3%;
+}
+
+#next {
+    float: right;
+    margin-left: 3%;
+}

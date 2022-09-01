@@ -1,5 +1,5 @@
 
-var url = "http://" + window.location.host + "/get_pdf/"+pdf_name;
+var url = "http://" + window.location.host + "/get_pdf/" + pdf_name;
 
 // Loaded via <script> tag, create shortcut to access PDF.js exports.
 var pdfjsLib = window['pdfjs-dist/build/pdf'];
