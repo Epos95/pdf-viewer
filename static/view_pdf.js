@@ -13,7 +13,7 @@ var pdf_name = window.pdf_name;
 var pageRendering = false;
 var pageNumPending = null;
 // TODO: better scaling so that phones dont get shafted
-var scale = 1.2;
+var scale = 1.01;
 var canvas = document.getElementById('the-canvas');
 var ctx = canvas.getContext('2d');
 
@@ -26,8 +26,21 @@ function renderPage(num) {
     // Using promise to fetch the page
     pdfDoc.getPage(num).then(function(page) {
         var viewport = page.getViewport({scale: scale});
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+
+        console.log(navigator.userAgentData.mobile);
+        if (navigator.userAgentData.mobile) {
+            scale = 0.7;
+            viewport = page.getViewport({scale: scale});
+            canvas.height = viewport.height+ 200;
+            canvas.width = viewport.width;
+        } else {
+            scale = 1.4;
+            viewport = page.getViewport({scale: scale});
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+        }
+
+        console.log("width: " +canvas.width+"\theight: " + canvas.height);
 
         // Render PDF page into canvas context
         var renderContext = {
