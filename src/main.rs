@@ -21,6 +21,16 @@ mod persistence;
 /// HashMap translating a title to the page number stored for that book.
 pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 
+// TODOS:
+// TODO: maybe a overall to not use pdf.js and instead split the pdfs into images at start-time 
+//       for better loading of images, currently it downloads (almost) the entire pdf and it feels
+//       very slow, splitting it and sending images on demand could make it *feel* faster since the 
+//       user only has one page rendered anyways, we could do something with local caching aswell for this
+//
+// TODO: Investigate how useful/not a pain WASM could be for this.
+//
+// TODO: Improve UX, look and feel on phone etc (after this is done you basically have a MVP)
+
 #[tokio::main]
 async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
