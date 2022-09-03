@@ -26,8 +26,7 @@ pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 //       for better loading of images, currently it downloads (almost) the entire pdf and it feels
 //       very slow, splitting it and sending images on demand could make it *feel* faster since the 
 //       user only has one page rendered anyways, we could do something with local caching aswell for this
-//
-// TODO: Investigate how useful/not a pain WASM could be for this.
+//       ( This is kind of important, its almost unuseable on phone... )
 //
 // TODO: Improve UX, look and feel on phone etc (after this is done you basically have a MVP)
 
