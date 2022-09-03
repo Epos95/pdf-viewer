@@ -1,7 +1,6 @@
 use askama::Template;
 use axum::{response::IntoResponse, Extension};
 use tokio::fs;
-use tracing::info;
 
 use crate::ContentState;
 
