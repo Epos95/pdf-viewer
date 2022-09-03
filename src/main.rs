@@ -27,7 +27,6 @@ async fn main() -> Result<(), hyper::Error> {
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
         .arg(arg!([dir] "Which directory to host (defaults to \"contents\")"))
-        // TODO: Arg which specifies location of pdfs at start-time
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {

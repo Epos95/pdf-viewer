@@ -38,6 +38,8 @@ pub async fn sync_state(dir: String, state: ContentState) -> Result<(), Box<dyn 
         .read(false)
         .truncate(true)
         // TODO: enforce data location through a exported const
+        //       also need to enforce the location of a specific 
+        //       directory to store the state in, like ~/.config
         .open("state.json")?;
 
     let hmap = &*state.lock().await;
