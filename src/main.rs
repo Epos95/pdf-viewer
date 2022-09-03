@@ -7,7 +7,7 @@ use axum::{
 };
 use clap::{arg, command};
 use routes::status::status;
-use tokio::{spawn, sync::Mutex, time::sleep};
+use tokio::{sync::Mutex, time::sleep};
 use tracing::{error, metadata::LevelFilter};
 
 mod routes;
@@ -21,12 +21,22 @@ mod persistence;
 /// HashMap translating a title to the page number stored for that book.
 pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 
+// TODOS:
+// TODO: maybe a overall to not use pdf.js and instead split the pdfs into images at start-time 
+//       for better loading of images, currently it downloads (almost) the entire pdf and it feels
+//       very slow, splitting it and sending images on demand could make it *feel* faster since the 
+//       user only has one page rendered anyways, we could do something with local caching aswell for this
+//
+// TODO: Investigate how useful/not a pain WASM could be for this.
+//
+// TODO: Improve UX, look and feel on phone etc (after this is done you basically have a MVP)
+
 #[tokio::main]
 async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
-        // TODO: Arg which specifies location of pdfs at start-time
+        .arg(arg!([dir] "Which directory to host (defaults to \"contents\")"))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -48,6 +58,10 @@ async fn main() -> Result<(), hyper::Error> {
         .parse::<u16>()
         .expect("Invalid argument!");
 
+    let directory = matches.get_one::<String>("dir")
+        .unwrap_or(&"content".to_string())
+        .to_owned();
+
     // TODO: Convert this to tokio::OpenOptions eventually
     let fd = OpenOptions::new()
         .read(true)
@@ -59,10 +73,11 @@ async fn main() -> Result<(), hyper::Error> {
 
     // spawn persistence
     let dummy = state_handler.clone();
+    let dir = directory.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) = persistence::sync_state(dummy.clone()).await {
+            if let Err(e) = persistence::sync_state(dir.clone(), dummy.clone()).await {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
             }
@@ -76,6 +91,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
+        .layer(Extension(directory))
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));

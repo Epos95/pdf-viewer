@@ -12,16 +12,16 @@ struct MainTemplate {
 }
 
 /// Method for getting the main/startup page.
-pub async fn main_page(Extension(book_state): Extension<ContentState>) -> impl IntoResponse {
-    let mut paths = fs::read_dir("content")
+pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension(dir): Extension<String>) -> impl IntoResponse {
+    let mut paths = fs::read_dir(dir)
         .await
-        .expect("Couldnt open \"content\" directory");
+        .expect("Couldnt open \"{dir}\" directory");
     let mut pdfs = vec![];
 
     // Could use the book_state for this instead...
     let guard = book_state.lock().await;
     while let Ok(Some(dir)) = paths.next_entry().await {
-        let pdf = dir.path().into_os_string().into_string().unwrap().split("/").last().unwrap().to_string();
+        let pdf = dir.path().into_os_string().into_string().unwrap().split("\\").last().unwrap().to_string();
         let num = guard.get(&pdf).unwrap();
         pdfs.push((pdf, *num));
     }

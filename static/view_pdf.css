@@ -7,7 +7,12 @@
 button {
     background-color: #b16286;
     border: none;
-    box-shadow: 10px 10px 10px grey;
+    box-shadow: 3px 4px 10px black;
+}
+
+button:hover {
+    background-color: #d3869b;
+    cursor: pointer;
 }
 
 body {
