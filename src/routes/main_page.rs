@@ -21,7 +21,7 @@ pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension
     // Could use the book_state for this instead...
     let guard = book_state.lock().await;
     while let Ok(Some(dir)) = paths.next_entry().await {
-        let pdf = dir.path().into_os_string().into_string().unwrap().split("\\").last().unwrap().to_string();
+        let pdf = dir.path().into_os_string().into_string().unwrap().split("/").last().unwrap().to_string();
         let num = guard.get(&pdf).unwrap();
         pdfs.push((pdf, *num));
     }
