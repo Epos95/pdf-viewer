@@ -27,6 +27,10 @@ pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 //       very slow, splitting it and sending images on demand could make it *feel* faster since the 
 //       user only has one page rendered anyways, we could do something with local caching aswell for this
 //       ( This is kind of important, its almost unuseable on phone... )
+//       To accomplish this we can use pdftk (pdftk big_pdf.pdf burst) at start time to split the
+//       files into many pdfs and then use imagemagicks' convert tool (convert in.pdf out.jpg)
+//       to create a jpg for each page. This does however take alot of time to do for larger pdfs
+//       to make it work great wed need to only run it on start or something like that
 //
 // TODO: Improve UX, look and feel on phone etc (after this is done you basically have a MVP)
 
