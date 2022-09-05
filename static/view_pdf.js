@@ -27,11 +27,11 @@ function renderPage(num) {
     pdfDoc.getPage(num).then(function(page) {
         var viewport = page.getViewport({scale: scale});
 
-        console.log(navigator.userAgentData.mobile);
-        if (navigator.userAgentData.mobile) {
-            scale = 0.7;
+        console.log("mobile: " + /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            scale = 0.8;
             viewport = page.getViewport({scale: scale});
-            canvas.height = viewport.height+ 200;
+            canvas.height = viewport.height + 150;
             canvas.width = viewport.width;
         } else {
             scale = 1.4;
