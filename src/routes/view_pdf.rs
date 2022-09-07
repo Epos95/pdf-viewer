@@ -26,10 +26,14 @@ pub async fn view_pdf(
     };
     drop(guard);
 
+    // offsets the fact that `view_pdf.js` increments the page number it gets set too.
+    // handles being on page 0 gracefully.
+    let new_page_number= cur_page_number.checked_sub(1).unwrap_or_default();
+
     info!("Someone is trying to view {pdf}");
     let template = ViewPDFTemplate {
         pdf_name: pdf,
-        cur_page_number,
+        cur_page_number: new_page_number,
     };
     debug!("Returning template {template:?}");
 
