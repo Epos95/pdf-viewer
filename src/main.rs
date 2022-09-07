@@ -32,7 +32,7 @@ pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 //       to create a jpg for each page. This does however take alot of time to do for larger pdfs
 //       to make it work great wed need to only run it on start or something like that
 //
-// TODO: Improve UX, look and feel on phone etc (after this is done you basically have a MVP)
+// TODO: a better index page with more info
 
 #[tokio::main]
 async fn main() -> Result<(), hyper::Error> {
