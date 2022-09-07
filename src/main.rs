@@ -32,7 +32,6 @@ pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 //       to create a jpg for each page. This does however take alot of time to do for larger pdfs
 //       to make it work great wed need to only run it on start or something like that
 //
-// TODO: better titles for documents
 // TODO: a better index page with more info
 
 #[tokio::main]
