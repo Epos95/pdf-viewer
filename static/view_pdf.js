@@ -85,6 +85,8 @@ function onPrevPage() {
         return;
     }
 
+    // Scroll to the top of the page so user can read good
+    window.scrollTo(0,0);
     set_page("-");
 }
 document.getElementById('prev').addEventListener('click', onPrevPage);
@@ -97,6 +99,8 @@ function onNextPage() {
         return;
     }
 
+    // Scroll to the top of the page so user can read good
+    window.scrollTo(0,0);
     set_page("+");
 }
 document.getElementById('next').addEventListener('click', onNextPage);
