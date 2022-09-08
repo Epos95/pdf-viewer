@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::OpenOptions, net::SocketAddr, process::exit, sync::Arc};
+use std::{collections::HashMap, fs::OpenOptions, net::SocketAddr, process::exit, sync::Arc, path::PathBuf};
 use tokio::time::Duration;
 
 use axum::{
@@ -8,7 +8,7 @@ use axum::{
 use clap::{arg, command};
 use routes::status::status;
 use tokio::{sync::Mutex, time::sleep};
-use tracing::{error, metadata::LevelFilter};
+use tracing::{error, metadata::LevelFilter, info};
 
 mod routes;
 use crate::routes::{
@@ -22,7 +22,7 @@ mod persistence;
 pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 
 // TODOS:
-// TODO: maybe a overall to not use pdf.js and instead split the pdfs into images at start-time 
+// TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time 
 //       for better loading of images, currently it downloads (almost) the entire pdf and it feels
 //       very slow, splitting it and sending images on demand could make it *feel* faster since the 
 //       user only has one page rendered anyways, we could do something with local caching aswell for this
@@ -40,6 +40,7 @@ async fn main() -> Result<(), hyper::Error> {
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
         .arg(arg!([dir] "Which directory to host (defaults to \"contents\")"))
+        .arg(arg!(-s --state [state] "The location to store the state.json file (defaults to ~/.state.json"))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -61,26 +62,33 @@ async fn main() -> Result<(), hyper::Error> {
         .parse::<u16>()
         .expect("Invalid argument!");
 
-    let directory = matches.get_one::<String>("dir")
-        .unwrap_or(&"content".to_string())
+    let directory = matches.get_one::<PathBuf>("dir")
+        .unwrap_or(&PathBuf::from("content"))
         .to_owned();
+
+    let home = dirs::home_dir()
+        .expect("Failed to get home directory???");
+    let state_location = PathBuf::from(matches.get_one::<String>("state")
+    	.unwrap_or(&format!("{}/.state.json", home.into_os_string().into_string().unwrap()))
+        .to_owned());
 
     // TODO: Convert this to tokio::OpenOptions eventually
     let fd = OpenOptions::new()
         .read(true)
-        .open("state.json")
-        .expect("Failed to open state.json!");
+        .open(&state_location)
+        .expect(&format!("Failed to open {state_location:?}"));
 
     let h: HashMap<String, u16> = serde_json::from_reader(fd).expect("Could not parse state.json!");
     let state_handler: ContentState = Arc::new(Mutex::new(h));
 
     // spawn persistence
     let dummy = state_handler.clone();
+    let dummy_location = state_location.clone();
     let dir = directory.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) = persistence::sync_state(dir.clone(), dummy.clone()).await {
+            if let Err(e) = persistence::sync_state(dir.clone(), dummy_location.clone(), dummy.clone()).await {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
             }
@@ -94,10 +102,16 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
-        .layer(Extension(directory))
+        .layer(Extension(directory.clone()))
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+
+    info!("Successfully started!");
+    info!("Listening on addres: {addr}");
+    info!("Looking in {} for pdfs to host.", directory.display());
+    info!("Found state.json at {}", state_location.display());
 
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
