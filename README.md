@@ -6,7 +6,7 @@ Centralized PDF reading from your browser.
  Instead of actually reading course literature I threw together this piece of software. 
  
  ## No, I meant why is it so bad??
- So this was just meant to be a internal tool for reading things, if I find areas to improve (there definetly are some of those) I will try push those changes throught the fall.
+ So this was just meant to be a internal tool for reading things, if I find areas to improve (of which there definetly are) I will try push those changes throughout the fall.
 
 ## How do I use it?
 in almost all scenarios you are better off buying a kindle or using some proprietary PDF reader but if the concept tempts you it is just a 
