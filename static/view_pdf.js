@@ -33,7 +33,7 @@ function renderPage(num) {
             canvas.height = viewport.height + 150;
             canvas.width = viewport.width;
         } else {
-            scale = 1.4;
+            scale = 0.2;
             viewport = page.getViewport({scale: scale});
             canvas.height = viewport.height;
             canvas.width = viewport.width;
