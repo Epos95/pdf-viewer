@@ -95,6 +95,7 @@ async fn main() -> Result<(), hyper::Error> {
         }
     });
 
+    let dir = directory.clone();
     let app = Router::new()
         .route("/", get(main_page))
         .route("/static/:path", get(static_path))
@@ -102,7 +103,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
-        .layer(Extension(directory.clone()))
+        .layer(Extension(dir))
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));

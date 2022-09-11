@@ -1,14 +1,16 @@
+use std::path::PathBuf;
+
 use axum::{body::StreamBody, extract::Path, response::IntoResponse, Extension};
 use http::{header, HeaderMap, HeaderValue, StatusCode};
 use tokio_util::io::ReaderStream;
 use tracing::info;
 
 /// Helper method for downloading a specified PDF from the server.
-pub async fn get_pdf(Path(pdf): Path<String>, Extension(dir): Extension<String>) -> impl IntoResponse {
+pub async fn get_pdf(Path(pdf): Path<String>, Extension(dir): Extension<PathBuf>) -> impl IntoResponse {
     // Add check for pdf extension
     info!("Someone wants to download pdf: {pdf}");
 
-    let file = match tokio::fs::File::open(format!("{dir}/{pdf}")).await {
+    let file = match tokio::fs::File::open(dir.join(&pdf)).await {
         Ok(file) => file,
         Err(err) => return Err((StatusCode::NOT_FOUND, format!("File not found: {}", err))),
     };
