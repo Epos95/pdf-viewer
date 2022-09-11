@@ -1,6 +1,9 @@
+use std::path::PathBuf;
+
 use askama::Template;
 use axum::{response::IntoResponse, Extension};
 use tokio::fs;
+use tracing::info;
 
 use crate::ContentState;
 
@@ -11,10 +14,10 @@ struct MainTemplate {
 }
 
 /// Method for getting the main/startup page.
-pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension(dir): Extension<String>) -> impl IntoResponse {
-    let mut paths = fs::read_dir(dir)
+pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension(directory): Extension<PathBuf>) -> impl IntoResponse {
+    let mut paths = fs::read_dir(directory)
         .await
-        .expect("Couldnt open \"{dir}\" directory");
+        .expect("Couldnt open \"{directory}\" directory");
     let mut pdfs = vec![];
 
     // Could use the book_state for this instead...

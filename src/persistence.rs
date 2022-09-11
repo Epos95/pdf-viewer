@@ -6,6 +6,7 @@
 
 use std::error::Error;
 use std::fs::OpenOptions;
+use std::path::PathBuf;
 use tokio::fs::read_dir;
 use tracing::info;
 
@@ -13,16 +14,16 @@ use crate::ContentState;
 
 /// Syncs the state in memory with the state on disk.
 /// Should run in the background continously.
-pub async fn sync_state(dir: String, state: ContentState) -> Result<(), Box<dyn Error>> {
-    // check the `/content` dir for pdfs not in `state` and add them
+pub async fn sync_state(content_dir: PathBuf, state_location: PathBuf, state: ContentState) -> Result<(), Box<dyn Error>> {
+    // check `content_dir` for pdfs not in `state` and add them
     let mut guard = state.lock().await;
-    let mut files = read_dir(dir).await?;
+    let mut files = read_dir(content_dir).await?;
 
     // TODO: Remove things from the state which are NOT within the directory.
     while let Ok(Some(f)) = files.next_entry().await {
         let string = f.file_name().into_string().unwrap();
         if !guard.contains_key(&string) {
-            // doesnt contain the string
+            // does not contain the string
 
             info!("Found new file: {string}");
             guard.insert(string, 1);
@@ -40,7 +41,7 @@ pub async fn sync_state(dir: String, state: ContentState) -> Result<(), Box<dyn 
         // TODO: enforce data location through a exported const
         //       also need to enforce the location of a specific 
         //       directory to store the state in, like `~/.config``
-        .open("state.json")?;
+        .open(state_location)?;
 
     let hmap = &*state.lock().await;
 
