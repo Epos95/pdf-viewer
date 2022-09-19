@@ -28,12 +28,15 @@ function renderPage(num) {
 
         console.log("mobile: " + /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            scale = 0.8;
+	    // mobile
+	    scale = 1.2;
+            //scale = canvas.width / page.getViewport(1.0);
             viewport = page.getViewport({scale: scale});
-            canvas.height = viewport.height + 150;
+            canvas.height = viewport.height + 50;
             canvas.width = viewport.width;
         } else {
-            scale = 0.2;
+	    // desktop
+            scale = 1.4;
             viewport = page.getViewport({scale: scale});
             canvas.height = viewport.height;
             canvas.width = viewport.width;
