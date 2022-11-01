@@ -28,5 +28,7 @@ pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension
         pdfs.push((pdf, *num));
     }
 
+    pdfs.sort_by(|a, b | (*b).1.partial_cmp(&a.1).unwrap());
+
     askama_axum::IntoResponse::into_response(MainTemplate { pdfs })
 }
