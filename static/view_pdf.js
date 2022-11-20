@@ -121,16 +121,17 @@ function set_page(direction) {
             return;
         }
 
+        // Only actually increment the page if we are unsynced.
         if (pageNum != server_page) {
             if (confirm("Desynced!\nJump to the page stored remotely?\n(local is at page: " + pageNum + ", server is at page: " + server_page + ")")) {
                 pageNum = data;
             }
-        }
-
-        if (direction == "+") {
-            pageNum++;
         } else {
-            pageNum--;
+            if (direction == "+") {
+                pageNum++;
+            } else {
+                pageNum--;
+            }
         }
 
         var dest = "http://"+window.location.host+"/view/"+pdf_name+"/set_page";
