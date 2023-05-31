@@ -1,4 +1,6 @@
-use std::{collections::HashMap, fs::OpenOptions, net::SocketAddr, process::exit, sync::Arc, path::PathBuf};
+use std::{
+    collections::HashMap, fs::OpenOptions, net::SocketAddr, path::PathBuf, process::exit, sync::Arc,
+};
 use tokio::time::Duration;
 
 use axum::{
@@ -8,7 +10,7 @@ use axum::{
 use clap::{arg, command};
 use routes::status::status;
 use tokio::{sync::Mutex, time::sleep};
-use tracing::{error, metadata::LevelFilter, info};
+use tracing::{error, info, metadata::LevelFilter};
 
 mod routes;
 use crate::routes::{
@@ -18,13 +20,15 @@ use crate::routes::{
 
 mod persistence;
 
+mod state;
+
 /// HashMap translating a title to the page number stored for that book.
 pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 
 // TODOS:
-// TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time 
+// TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time
 //       for better loading of images, currently it downloads (almost) the entire pdf and it feels
-//       very slow, splitting it and sending images on demand could make it *feel* faster since the 
+//       very slow, splitting it and sending images on demand could make it *feel* faster since the
 //       user only has one page rendered anyways, we could do something with local caching aswell for this
 //       ( This is kind of important, its almost unuseable on phone... )
 //       To accomplish this we can use pdftk (pdftk big_pdf.pdf burst) at start time to split the
@@ -57,20 +61,27 @@ async fn main() -> Result<(), hyper::Error> {
 
     tracing::subscriber::set_global_default(sub).unwrap();
 
-    let port = matches.get_one::<String>("port")
+    let port = matches
+        .get_one::<String>("port")
         .unwrap_or(&3000.to_string())
         .parse::<u16>()
         .expect("Invalid argument!");
 
-    let directory = matches.get_one::<PathBuf>("dir")
+    let directory = matches
+        .get_one::<PathBuf>("dir")
         .unwrap_or(&PathBuf::from("content"))
         .to_owned();
 
-    let home = dirs::home_dir()
-        .expect("Failed to get home directory???");
-    let state_location = PathBuf::from(matches.get_one::<String>("state")
-    	.unwrap_or(&format!("{}/.state.json", home.into_os_string().into_string().unwrap()))
-        .to_owned());
+    let home = dirs::home_dir().expect("Failed to get home directory???");
+    let state_location = PathBuf::from(
+        matches
+            .get_one::<String>("state")
+            .unwrap_or(&format!(
+                "{}/.state.json",
+                home.into_os_string().into_string().unwrap()
+            ))
+            .to_owned(),
+    );
 
     // TODO: Convert this to tokio::OpenOptions eventually
     let fd = OpenOptions::new()
@@ -88,7 +99,9 @@ async fn main() -> Result<(), hyper::Error> {
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) = persistence::sync_state(dir.clone(), dummy_location.clone(), dummy.clone()).await {
+            if let Err(e) =
+                persistence::sync_state(dir.clone(), dummy_location.clone(), dummy.clone()).await
+            {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
             }
@@ -107,7 +120,6 @@ async fn main() -> Result<(), hyper::Error> {
         .layer(Extension(state_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-
 
     info!("Successfully started!");
     info!("Listening on addres: {addr}");
