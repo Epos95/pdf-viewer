@@ -10,23 +10,27 @@ use std::path::PathBuf;
 use tokio::fs::read_dir;
 use tracing::info;
 
-use crate::ContentState;
+use crate::state::WrappedPdfCollection;
 
 /// Syncs the state in memory with the state on disk.
 /// Should run in the background continously.
-pub async fn sync_state(content_dir: PathBuf, state_location: PathBuf, state: ContentState) -> Result<(), Box<dyn Error>> {
+pub async fn sync_state(
+    content_dir: PathBuf,
+    state_location: PathBuf,
+    state: WrappedPdfCollection,
+) -> Result<(), Box<dyn Error>> {
     // check `content_dir` for pdfs not in `state` and add them
     let mut guard = state.lock().await;
     let mut files = read_dir(content_dir).await?;
 
     // TODO: Remove things from the state which are NOT within the directory.
+    // TODO: This runs in O(n * m) time, could we do it more efficient?
     while let Ok(Some(f)) = files.next_entry().await {
-        let string = f.file_name().into_string().unwrap();
-        if !guard.contains_key(&string) {
-            // does not contain the string
+        let name = f.file_name().into_string().unwrap();
+        let path = f.path();
 
-            info!("Found new file: {string}");
-            guard.insert(string, 1);
+        if !guard.has_book(name) {
+            guard.add_book(path);
         }
     }
     drop(guard);
@@ -39,12 +43,12 @@ pub async fn sync_state(content_dir: PathBuf, state_location: PathBuf, state: Co
         .read(false)
         .truncate(true)
         // TODO: enforce data location through a exported const
-        //       also need to enforce the location of a specific 
+        //       also need to enforce the location of a specific
         //       directory to store the state in, like `~/.config``
         .open(state_location)?;
 
-    let hmap = &*state.lock().await;
+    let pdfs = &*state.lock().await;
 
-    serde_json::to_writer(fd, &hmap)?;
+    serde_json::to_writer(fd, &pdfs)?;
     Ok(())
 }

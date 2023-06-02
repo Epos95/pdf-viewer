@@ -44,13 +44,15 @@ impl From<DateTime<Local>> for AccessTime {
     }
 }
 
+pub type WrappedPdfCollection = Arc<Mutex<PdfCollection>>;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PdfCollection {
     pdfs: Vec<Pdf>,
 }
 
 impl PdfCollection {
-    pub fn wrapped(self) -> Arc<Mutex<PdfCollection>> {
+    pub fn wrapped(self) -> WrappedPdfCollection {
         Arc::new(Mutex::new(self))
     }
 
@@ -71,6 +73,10 @@ impl PdfCollection {
 
     pub fn add_book(&mut self, pdf: Pdf) {
         self.pdfs.push(pdf);
+    }
+
+    pub fn pdfs(&self) -> &[Pdf] {
+        self.pdfs.as_ref()
     }
 }
 
@@ -117,23 +123,23 @@ impl Pdf {
         re.find_iter(buf.as_str()).count().try_into().unwrap()
     }
 
-    fn last_access(&self) -> &AccessTime {
+    pub fn last_access(&self) -> &AccessTime {
         &self.last_access
     }
 
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_ref()
     }
 
-    fn path(&self) -> &PathBuf {
+    pub fn path(&self) -> &PathBuf {
         &self.path
     }
 
-    fn current_page(&self) -> u16 {
+    pub fn current_page(&self) -> u16 {
         self.current_page
     }
 
-    fn total_pages(&self) -> u16 {
+    pub fn total_pages(&self) -> u16 {
         self.total_pages
     }
 }

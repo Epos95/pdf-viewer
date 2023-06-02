@@ -13,9 +13,12 @@ use tokio::{sync::Mutex, time::sleep};
 use tracing::{error, info, metadata::LevelFilter};
 
 mod routes;
-use crate::routes::{
-    get_pdf::get_pdf, main_page::main_page, set_page::set_page, static_path::static_path,
-    view_pdf::view_pdf,
+use crate::{
+    routes::{
+        get_pdf::get_pdf, main_page::main_page, set_page::set_page, static_path::static_path,
+        view_pdf::view_pdf,
+    },
+    state::PdfCollection,
 };
 
 mod persistence;
@@ -89,11 +92,12 @@ async fn main() -> Result<(), hyper::Error> {
         .open(&state_location)
         .expect(&format!("Failed to open {state_location:?}"));
 
-    let h: HashMap<String, u16> = serde_json::from_reader(fd).expect("Could not parse state.json!");
-    let state_handler: ContentState = Arc::new(Mutex::new(h));
+    let unwrapped: PdfCollection =
+        serde_json::from_reader(fd).expect("Could not parse {state_location}");
+    let state = unwrapped.wrapped();
 
     // spawn persistence
-    let dummy = state_handler.clone();
+    let dummy = state.clone();
     let dummy_location = state_location.clone();
     let dir = directory.clone();
     tokio::spawn(async move {
@@ -117,7 +121,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
         .layer(Extension(dir))
-        .layer(Extension(state_handler));
+        .layer(Extension(state));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 

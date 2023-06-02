@@ -5,7 +5,7 @@ use axum::{response::IntoResponse, Extension};
 use tokio::fs;
 use tracing::info;
 
-use crate::ContentState;
+use crate::{state::WrappedPdfCollection, ContentState};
 
 #[derive(Template)]
 #[template(path = "index.html")]
@@ -14,21 +14,19 @@ struct MainTemplate {
 }
 
 /// Method for getting the main/startup page.
-pub async fn main_page(Extension(book_state): Extension<ContentState>, Extension(directory): Extension<PathBuf>) -> impl IntoResponse {
+pub async fn main_page(
+    Extension(book_state): Extension<WrappedPdfCollection>,
+    Extension(directory): Extension<PathBuf>,
+) -> impl IntoResponse {
     let mut paths = fs::read_dir(directory)
         .await
         .expect("Couldnt open \"{directory}\" directory");
-    let mut pdfs = vec![];
 
     // Could use the book_state for this instead...
     let guard = book_state.lock().await;
-    while let Ok(Some(dir)) = paths.next_entry().await {
-        let pdf = dir.path().into_os_string().into_string().unwrap().split("/").last().unwrap().to_string();
-        let num = guard.get(&pdf).unwrap();
-        pdfs.push((pdf, *num));
-    }
+    let mut pdfs = guard.pdfs();
 
-    pdfs.sort_by(|a, b | (*b).1.partial_cmp(&a.1).unwrap());
+    pdfs.sort_by(|a, b| a.total_pages() > b.total_pages());
 
     askama_axum::IntoResponse::into_response(MainTemplate { pdfs })
 }
