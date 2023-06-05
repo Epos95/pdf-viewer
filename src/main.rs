@@ -87,6 +87,7 @@ async fn main() -> Result<(), hyper::Error> {
     );
 
     // TODO: Convert this to tokio::OpenOptions eventually
+    // TODO: Have this create file if specified and it does not exist
     let fd = OpenOptions::new()
         .read(true)
         .open(&state_location)

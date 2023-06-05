@@ -8,9 +8,8 @@ use std::error::Error;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use tokio::fs::read_dir;
-use tracing::info;
 
-use crate::state::WrappedPdfCollection;
+use crate::state::{Pdf, WrappedPdfCollection};
 
 /// Syncs the state in memory with the state on disk.
 /// Should run in the background continously.
@@ -20,7 +19,7 @@ pub async fn sync_state(
     state: WrappedPdfCollection,
 ) -> Result<(), Box<dyn Error>> {
     // check `content_dir` for pdfs not in `state` and add them
-    let mut guard = state.lock().await;
+    let mut state_ref = state.lock().await;
     let mut files = read_dir(content_dir).await?;
 
     // TODO: Remove things from the state which are NOT within the directory.
@@ -29,15 +28,17 @@ pub async fn sync_state(
         let name = f.file_name().into_string().unwrap();
         let path = f.path();
 
-        if !guard.has_book(name) {
-            guard.add_book(path);
+        if !state_ref.has_book(&name.split(".").next().unwrap()) {
+            tracing::info!("Added new book {path:?}");
+            let doc = Pdf::new(path);
+            state_ref.add_book(doc);
         }
     }
-    drop(guard);
+    drop(state_ref);
 
     // write state to file
     // TODO: investigate if this not being async gives issues
-    // 		 also how to make it async
+    //       also how to make it async
     let fd = OpenOptions::new()
         .write(true)
         .read(false)

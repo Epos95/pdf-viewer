@@ -12,8 +12,9 @@
 	<h3>These are the available PDFs</h3>
 	{% for pdf in pdfs %}
 		<div class="pdf">
-			<a href="view/{{pdf.0}}">{{pdf.0.split('.').next().unwrap()}}</a>
-			<span>Page: {{pdf.1}}<span>
+			<a href="view/{{pdf.name()}}.pdf">{{pdf.name()}}</a>
+			<span>Page: {{pdf.current_page()}}<span>
+			<span>Last accessed: {{pdf.last_access()}}<span>
 		</div>
 	{% endfor %}
 </body>

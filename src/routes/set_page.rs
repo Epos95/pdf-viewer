@@ -2,7 +2,7 @@ use axum::{extract::Path, response::IntoResponse, Extension, Json};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
-use crate::ContentState;
+use crate::state::WrappedPdfCollection;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SetPageData {
@@ -15,19 +15,14 @@ pub struct SetPageData {
 pub async fn set_page(
     Path(pdf): Path<String>,
     Json(json): Json<SetPageData>,
-    Extension(content_state): Extension<ContentState>,
+    Extension(pdfs): Extension<WrappedPdfCollection>,
 ) -> impl IntoResponse {
-    let mut g = content_state.lock().await;
+    let mut g = pdfs.lock().await;
     debug!("Setting page to {} for {}", json.new_page, json.pdf_name);
 
-    match g.get_mut(&pdf) {
-        Some(n) => {
-            *n = json.new_page;
-        }
-        None => {
-            error!("Request for prev on non-existent content: {pdf}");
-            return Err("Request for prev on non-existent content: {pdf}");
-        }
+    if let None = g.set_page_by_name(&pdf, json.new_page) {
+        error!("Request for prev on non-existent content: {pdf}");
+        return Err("Request for prev on non-existent content: {pdf}");
     }
 
     Ok(())
