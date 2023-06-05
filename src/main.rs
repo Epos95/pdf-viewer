@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap, fs::OpenOptions, net::SocketAddr, path::PathBuf, process::exit, sync::Arc,
-};
+use std::{fs::OpenOptions, net::SocketAddr, path::PathBuf, process::exit};
 use tokio::time::Duration;
 
 use axum::{
@@ -9,13 +7,17 @@ use axum::{
 };
 use clap::{arg, command};
 use routes::status::status;
-use tokio::{sync::Mutex, time::sleep};
+use tokio::time::sleep;
 use tracing::{error, info, metadata::LevelFilter};
 
 mod routes;
 use crate::{
     routes::{
-        get_pdf::get_pdf, main_page::main_page, set_page::set_page, static_path::static_path,
+        get_pdf::get_pdf,
+        main_page::main_page,
+        set_page::set_page,
+        static_path::static_path,
+        stats::{self, get_last_day, get_last_month, get_last_week},
         view_pdf::view_pdf,
     },
     state::PdfCollection,
@@ -24,9 +26,6 @@ use crate::{
 mod persistence;
 
 mod state;
-
-/// HashMap translating a title to the page number stored for that book.
-pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
 
 // TODOS:
 // TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time
@@ -113,6 +112,8 @@ async fn main() -> Result<(), hyper::Error> {
         }
     });
 
+    let read_stats = stats::ReadingStatistics::wrapped();
+
     let dir = directory.clone();
     let app = Router::new()
         .route("/", get(main_page))
@@ -121,6 +122,10 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
+        .route("/stats/last_day", get(get_last_day))
+        .route("/stats/last_month", get(get_last_month))
+        .route("/stats/last_week", get(get_last_week))
+        .layer(Extension(read_stats))
         .layer(Extension(dir))
         .layer(Extension(state));
 

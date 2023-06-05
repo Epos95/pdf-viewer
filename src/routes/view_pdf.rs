@@ -2,7 +2,7 @@ use askama::Template;
 use axum::{extract::Path, response::IntoResponse, Extension};
 use tracing::{debug, error, info};
 
-use crate::{state::WrappedPdfCollection, ContentState};
+use crate::state::WrappedPdfCollection;
 
 #[derive(Template, Debug)]
 #[template(path = "view_pdf.html")]

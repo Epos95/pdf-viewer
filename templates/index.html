@@ -9,13 +9,22 @@
 	<link href='https://fonts.googleapis.com/css?family=Fira Code' rel='stylesheet'>
 </head>
 <body>
-	<h3>These are the available PDFs</h3>
-	{% for pdf in pdfs %}
-		<div class="pdf">
-			<a href="view/{{pdf.name()}}.pdf">{{pdf.name()}}</a>
-			<span>Page: {{pdf.current_page()}}<span>
-			<span>Last accessed: {{pdf.last_access()}}<span>
-		</div>
-	{% endfor %}
+	<ul class="pdf-container">
+		<h3>These are the available PDFs</h3>
+		{% for pdf in pdfs %}
+			<li class="pdf">
+				<a href="view/{{pdf.name()}}.pdf">{{pdf.name()}}</a>
+				<span>Page: {{pdf.current_page()}}<span>
+				<span>Last accessed: {{pdf.last_access()}}<span>
+			</li>
+		{% endfor %}
+	</ul>
+
+	<div class="stats-container">
+		<h2>Pages read:</h2>
+		<h3 class="today">today: {{today}}</h3>
+		<h3 class="week">this week: {{week}}</h3>
+		<h3 class="month">this month: {{month}}</h3>
+	</div>
 </body>
 </html>
