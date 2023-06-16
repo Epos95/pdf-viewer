@@ -1,12 +1,13 @@
 // Route for counting how much has been read in the last `n` days
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use axum::{response::IntoResponse, Extension};
 use chrono::{DateTime, Duration, Local};
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
 #[allow(dead_code)]
 enum ReadCategory {
     Day,
@@ -15,6 +16,7 @@ enum ReadCategory {
     More,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct ReadingEvent {
     time: DateTime<Local>,
     validity: ReadCategory,
@@ -32,7 +34,8 @@ impl Default for ReadingEvent {
 impl ReadingEvent {
     /// Updates a `ReadingEvent`s `ReadCategory` and return the new `ReadCategory`.
     pub fn update(&mut self, current_time: &DateTime<Local>) {
-        let time_since = self.time - *current_time;
+        //let time_since = self.time - *current_time;
+        let time_since = *current_time - self.time;
 
         if time_since < Duration::days(1) {
             self.validity = ReadCategory::Day;
@@ -47,17 +50,24 @@ impl ReadingEvent {
 }
 
 pub type WrappedReadingStatistics = Arc<Mutex<ReadingStatistics>>;
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReadingStatistics {
     events: Vec<ReadingEvent>,
 }
 
 impl ReadingStatistics {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self { events: vec![] }
     }
 
+    #[allow(dead_code)]
     pub fn wrapped() -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self::new()))
+    }
+
+    pub fn as_wrapped(self) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(self))
     }
 
     pub fn increment(&mut self) {
@@ -99,15 +109,18 @@ impl ReadingStatistics {
 pub async fn get_last_day(
     Extension(reading_stats): Extension<WrappedReadingStatistics>,
 ) -> impl IntoResponse {
-    "200"
+    let reading_guard = reading_stats.lock().await;
+    reading_guard.last_day().to_string()
 }
 pub async fn get_last_week(
     Extension(reading_stats): Extension<WrappedReadingStatistics>,
 ) -> impl IntoResponse {
-    "200"
+    let reading_guard = reading_stats.lock().await;
+    reading_guard.last_week().to_string()
 }
 pub async fn get_last_month(
     Extension(reading_stats): Extension<WrappedReadingStatistics>,
 ) -> impl IntoResponse {
-    "200"
+    let reading_guard = reading_stats.lock().await;
+    reading_guard.last_month().to_string()
 }

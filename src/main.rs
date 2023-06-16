@@ -12,15 +12,15 @@ use tracing::{error, info, metadata::LevelFilter};
 
 mod routes;
 use crate::{
+    persistence::DiscState,
     routes::{
         get_pdf::get_pdf,
         main_page::main_page,
         set_page::set_page,
         static_path::static_path,
-        stats::{self, get_last_day, get_last_month, get_last_week},
+        stats::{get_last_day, get_last_month, get_last_week},
         view_pdf::view_pdf,
     },
-    state::PdfCollection,
 };
 
 mod persistence;
@@ -92,27 +92,42 @@ async fn main() -> Result<(), hyper::Error> {
         .open(&state_location)
         .expect(&format!("Failed to open {state_location:?}"));
 
-    let unwrapped: PdfCollection =
-        serde_json::from_reader(fd).expect("Could not parse {state_location}");
+    let disc_state: DiscState =
+        serde_json::from_reader(fd).expect(format!("Could not parse {state_location:?}").as_str());
+
+    let unwrapped = disc_state.pdfs;
     let state = unwrapped.wrapped();
 
     // spawn persistence
     let dummy = state.clone();
     let dummy_location = state_location.clone();
+    let read_stats = disc_state.reading_history.to_owned().as_wrapped();
+    {
+        let mut w = read_stats.lock().await;
+        w.update();
+    }
+    let read_dummy = read_stats.clone();
     let dir = directory.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) =
-                persistence::sync_state(dir.clone(), dummy_location.clone(), dummy.clone()).await
+            if let Err(e) = persistence::sync_state(
+                dir.clone(),
+                dummy_location.clone(),
+                dummy.clone(),
+                read_dummy.clone(),
+            )
+            .await
             {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
             }
+            {
+                let mut w = read_dummy.lock().await;
+                w.update();
+            }
         }
     });
-
-    let read_stats = stats::ReadingStatistics::wrapped();
 
     let dir = directory.clone();
     let app = Router::new()

@@ -48,7 +48,7 @@ pub type WrappedPdfCollection = Arc<Mutex<PdfCollection>>;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PdfCollection {
     // Use hashmap instead for that sweet, sweet, k,v goodness. Also because JSON prefers it.
-    pdfs: HashMap<String, Pdf>,
+    pub pdfs: HashMap<String, Pdf>,
 }
 
 impl PdfCollection {
@@ -153,6 +153,7 @@ impl Pdf {
         self.name.as_ref()
     }
 
+    #[allow(dead_code)]
     pub fn path(&self) -> &PathBuf {
         &self.path
     }

@@ -45,7 +45,7 @@ ul {
 }
 
 .pdf:hover {
-    transition: 0.5s;
+    transition: 0.7s;
     background-color: var(--overlay0);
 }
 
