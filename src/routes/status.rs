@@ -2,16 +2,16 @@ use axum::{extract::Path, response::IntoResponse, Extension};
 
 use tracing::error;
 
-use crate::ContentState;
+use crate::state::WrappedPdfCollection;
 
 pub async fn status(
     Path(pdf): Path<String>,
-    Extension(content_state): Extension<ContentState>,
+    Extension(content_state): Extension<WrappedPdfCollection>,
 ) -> impl IntoResponse {
-    let mut g = content_state.lock().await;
+    let g = content_state.lock().await;
 
-    if let Some(n) = g.get_mut(&pdf) {
-        (*n).to_string()
+    if let Some(n) = g.get_book_by_name(&pdf) {
+        n.current_page().to_string()
     } else {
         error!("Request for status for non-existent content: {pdf}");
         String::from("-1")

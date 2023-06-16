@@ -2,7 +2,7 @@ use askama::Template;
 use axum::{extract::Path, response::IntoResponse, Extension};
 use tracing::{debug, error, info};
 
-use crate::ContentState;
+use crate::state::WrappedPdfCollection;
 
 #[derive(Template, Debug)]
 #[template(path = "view_pdf.html")]
@@ -14,14 +14,17 @@ struct ViewPDFTemplate {
 /// The method for getting the page where the user views *one* PDF
 pub async fn view_pdf(
     Path(pdf): Path<String>,
-    Extension(book_state): Extension<ContentState>,
+    Extension(book_state): Extension<WrappedPdfCollection>,
 ) -> impl IntoResponse {
-    let guard = book_state.lock().await;
-    let cur_page_number = match guard.get(&pdf) {
-        Some(n) => *n,
+    let mut guard = book_state.lock().await;
+    let cur_page_number = match guard.get_book_by_name_mut(&pdf) {
+        Some(pdf) => {
+            pdf.access();
+            pdf.current_page()
+        }
         None => {
             error!("Request for non-existent content: {pdf}");
-            return Err("Request for non-existent content: {pdf}");
+            return Err(format!("Request for non-existent content: {pdf}"));
         }
     };
     drop(guard);

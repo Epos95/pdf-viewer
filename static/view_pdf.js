@@ -113,6 +113,7 @@ function set_page(direction) {
     fetch(dest).then(function(response) {
         return response.json();
     }).then(function(data) {
+        console.log(data);
         server_page = parseInt(data);
         console.log(server_page);
 

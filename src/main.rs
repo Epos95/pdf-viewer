@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::OpenOptions, net::SocketAddr, process::exit, sync::Arc, path::PathBuf};
+use std::{fs::OpenOptions, net::SocketAddr, path::PathBuf, process::exit};
 use tokio::time::Duration;
 
 use axum::{
@@ -7,24 +7,30 @@ use axum::{
 };
 use clap::{arg, command};
 use routes::status::status;
-use tokio::{sync::Mutex, time::sleep};
-use tracing::{error, metadata::LevelFilter, info};
+use tokio::time::sleep;
+use tracing::{error, info, metadata::LevelFilter};
 
 mod routes;
-use crate::routes::{
-    get_pdf::get_pdf, main_page::main_page, set_page::set_page, static_path::static_path,
-    view_pdf::view_pdf,
+use crate::{
+    persistence::DiscState,
+    routes::{
+        get_pdf::get_pdf,
+        main_page::main_page,
+        set_page::set_page,
+        static_path::static_path,
+        stats::{get_last_day, get_last_month, get_last_week},
+        view_pdf::view_pdf,
+    },
 };
 
 mod persistence;
 
-/// HashMap translating a title to the page number stored for that book.
-pub type ContentState = Arc<Mutex<HashMap<String, u16>>>;
+mod state;
 
 // TODOS:
-// TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time 
+// TODO: maybe a overall to not use pdf.js and instead split the pdfs into i&mages at start-time
 //       for better loading of images, currently it downloads (almost) the entire pdf and it feels
-//       very slow, splitting it and sending images on demand could make it *feel* faster since the 
+//       very slow, splitting it and sending images on demand could make it *feel* faster since the
 //       user only has one page rendered anyways, we could do something with local caching aswell for this
 //       ( This is kind of important, its almost unuseable on phone... )
 //       To accomplish this we can use pdftk (pdftk big_pdf.pdf burst) at start time to split the
@@ -57,40 +63,68 @@ async fn main() -> Result<(), hyper::Error> {
 
     tracing::subscriber::set_global_default(sub).unwrap();
 
-    let port = matches.get_one::<String>("port")
+    let port = matches
+        .get_one::<String>("port")
         .unwrap_or(&3000.to_string())
         .parse::<u16>()
         .expect("Invalid argument!");
 
-    let directory = matches.get_one::<PathBuf>("dir")
+    let directory = matches
+        .get_one::<PathBuf>("dir")
         .unwrap_or(&PathBuf::from("content"))
         .to_owned();
 
-    let home = dirs::home_dir()
-        .expect("Failed to get home directory???");
-    let state_location = PathBuf::from(matches.get_one::<String>("state")
-    	.unwrap_or(&format!("{}/.state.json", home.into_os_string().into_string().unwrap()))
-        .to_owned());
+    let home = dirs::home_dir().expect("Failed to get home directory???");
+    let state_location = PathBuf::from(
+        matches
+            .get_one::<String>("state")
+            .unwrap_or(&format!(
+                "{}/.state.json",
+                home.into_os_string().into_string().unwrap()
+            ))
+            .to_owned(),
+    );
 
     // TODO: Convert this to tokio::OpenOptions eventually
+    // TODO: Have this create file if specified and it does not exist
     let fd = OpenOptions::new()
         .read(true)
         .open(&state_location)
         .expect(&format!("Failed to open {state_location:?}"));
 
-    let h: HashMap<String, u16> = serde_json::from_reader(fd).expect("Could not parse state.json!");
-    let state_handler: ContentState = Arc::new(Mutex::new(h));
+    let disc_state: DiscState =
+        serde_json::from_reader(fd).expect(format!("Could not parse {state_location:?}").as_str());
+
+    let unwrapped = disc_state.pdfs;
+    let state = unwrapped.wrapped();
 
     // spawn persistence
-    let dummy = state_handler.clone();
+    let dummy = state.clone();
     let dummy_location = state_location.clone();
+    let read_stats = disc_state.reading_history.to_owned().as_wrapped();
+    {
+        let mut w = read_stats.lock().await;
+        w.update();
+    }
+    let read_dummy = read_stats.clone();
     let dir = directory.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
-            if let Err(e) = persistence::sync_state(dir.clone(), dummy_location.clone(), dummy.clone()).await {
+            if let Err(e) = persistence::sync_state(
+                dir.clone(),
+                dummy_location.clone(),
+                dummy.clone(),
+                read_dummy.clone(),
+            )
+            .await
+            {
                 error!("Failed to run persistence: {e:?}");
                 exit(0);
+            }
+            {
+                let mut w = read_dummy.lock().await;
+                w.update();
             }
         }
     });
@@ -103,11 +137,14 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/view/:pdf/set_page", post(set_page))
         .route("/get_pdf/:pdf", get(get_pdf))
         .route("/status/:pdf", get(status))
+        .route("/stats/last_day", get(get_last_day))
+        .route("/stats/last_month", get(get_last_month))
+        .route("/stats/last_week", get(get_last_week))
+        .layer(Extension(read_stats))
         .layer(Extension(dir))
-        .layer(Extension(state_handler));
+        .layer(Extension(state));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-
 
     info!("Successfully started!");
     info!("Listening on addres: {addr}");

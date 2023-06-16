@@ -4,47 +4,70 @@
 // the persistence could have a function running constantly checking the content dir for new pdfs
 // so that new pdfs can be appended at runtime
 
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use tokio::fs::read_dir;
-use tracing::info;
 
-use crate::ContentState;
+use crate::{
+    routes::stats::{ReadingStatistics, WrappedReadingStatistics},
+    state::{Pdf, PdfCollection, WrappedPdfCollection},
+};
+
+// TODO: Maybe implement Drop for this so we dont get halfwrites when exiting the program
+#[derive(Serialize, Deserialize)]
+/// Struct for writing BOTH a pdfcollection and a readingstatistics to disc as one.
+pub struct DiscState {
+    pub pdfs: PdfCollection,
+    pub reading_history: ReadingStatistics,
+}
 
 /// Syncs the state in memory with the state on disk.
 /// Should run in the background continously.
-pub async fn sync_state(content_dir: PathBuf, state_location: PathBuf, state: ContentState) -> Result<(), Box<dyn Error>> {
+pub async fn sync_state(
+    content_dir: PathBuf,
+    state_location: PathBuf,
+    pdfs: WrappedPdfCollection,
+    reading_history: WrappedReadingStatistics,
+) -> Result<(), Box<dyn Error>> {
     // check `content_dir` for pdfs not in `state` and add them
-    let mut guard = state.lock().await;
+    let mut state_ref = pdfs.lock().await;
     let mut files = read_dir(content_dir).await?;
 
     // TODO: Remove things from the state which are NOT within the directory.
+    // TODO: This runs in O(n * m) time, could we do it more efficient?
     while let Ok(Some(f)) = files.next_entry().await {
-        let string = f.file_name().into_string().unwrap();
-        if !guard.contains_key(&string) {
-            // does not contain the string
+        let name = f.file_name().into_string().unwrap();
+        let path = f.path();
 
-            info!("Found new file: {string}");
-            guard.insert(string, 1);
+        if !state_ref.has_book(&name.split('.').next().unwrap()) {
+            tracing::info!("Added new book {path:?}");
+            let doc = Pdf::new(path);
+            state_ref.add_book(doc);
         }
     }
-    drop(guard);
+    drop(state_ref);
 
     // write state to file
     // TODO: investigate if this not being async gives issues
-    // 		 also how to make it async
+    //       also how to make it async
     let fd = OpenOptions::new()
         .write(true)
         .read(false)
         .truncate(true)
         // TODO: enforce data location through a exported const
-        //       also need to enforce the location of a specific 
+        //       also need to enforce the location of a specific
         //       directory to store the state in, like `~/.config``
         .open(state_location)?;
 
-    let hmap = &*state.lock().await;
+    let reading_history = &*reading_history.lock().await;
+    let pdfs = &*pdfs.lock().await;
+    let state = DiscState {
+        pdfs: pdfs.clone(),
+        reading_history: reading_history.clone(),
+    };
 
-    serde_json::to_writer(fd, &hmap)?;
+    serde_json::to_writer_pretty(fd, &state)?;
     Ok(())
 }
