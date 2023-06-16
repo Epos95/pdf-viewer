@@ -30,7 +30,7 @@ pub async fn set_page(
     };
     debug!("Setting page to {} for {}", json.new_page, json.pdf_name);
 
-    if let None = g.set_page_by_name(&pdf, json.new_page) {
+    if g.set_page_by_name(&pdf, json.new_page).is_none() {
         error!("Request for page on non-existent content: {pdf}");
         return Err("Request for page on non-existent content: {pdf}");
     }

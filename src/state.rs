@@ -1,14 +1,11 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    fs::File,
-    io::Read,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use chrono::{DateTime, Local};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -116,7 +113,7 @@ impl Pdf {
             .expect("Couldnt convert {path} to string!")
             .to_string();
 
-        let total_pages = Pdf::get_total_pages(path.as_path());
+        let total_pages = Pdf::get_total_pages(path.as_path()).unwrap();
         tracing::info!("{name} has {total_pages} pages");
 
         Pdf {
@@ -130,19 +127,12 @@ impl Pdf {
 
     /// Reads a pdf and gets the total pages in it.
     /// Fails on invalid files.
-    fn get_total_pages(path: &Path) -> u16 {
-        return 1337;
-        // FIXME: None of this works, replace with pdf-rs maybe?
-        let re = Regex::new(r"/Type\s*/Page[^s]").unwrap();
-
-        let mut file = File::open(path).unwrap();
-        let mut buf = String::new();
-        let n = file
-            .read_to_string(&mut buf)
-            .expect(&format!("failed to read {path:?}"));
-        tracing::debug!("Read {n} bytes from {path:?}");
-
-        re.find_iter(buf.as_str()).count().try_into().unwrap()
+    fn get_total_pages(path: &Path) -> Result<u16, String> {
+        // Memory inefficient but gets the job done...
+        match lopdf::Document::load(path) {
+            Ok(p) => Ok(p.get_pages().into_iter().len() as u16),
+            Err(_) => Err(String::from("PDF not found at location: {path}")),
+        }
     }
 
     pub fn last_access(&self) -> &AccessTime {
@@ -168,5 +158,9 @@ impl Pdf {
 
     pub fn access(&mut self) {
         self.last_access = AccessTime::now();
+    }
+
+    pub fn percentage_read(&self) -> u32 {
+        ((self.current_page as f32 / self.total_pages as f32) * 100.0).floor() as u32
     }
 }

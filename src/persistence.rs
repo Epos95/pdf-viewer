@@ -41,7 +41,7 @@ pub async fn sync_state(
         let name = f.file_name().into_string().unwrap();
         let path = f.path();
 
-        if !state_ref.has_book(&name.split(".").next().unwrap()) {
+        if !state_ref.has_book(&name.split('.').next().unwrap()) {
             tracing::info!("Added new book {path:?}");
             let doc = Pdf::new(path);
             state_ref.add_book(doc);
@@ -68,6 +68,6 @@ pub async fn sync_state(
         reading_history: reading_history.clone(),
     };
 
-    serde_json::to_writer(fd, &state)?;
+    serde_json::to_writer_pretty(fd, &state)?;
     Ok(())
 }
