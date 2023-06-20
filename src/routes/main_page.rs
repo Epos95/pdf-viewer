@@ -46,6 +46,19 @@ pub async fn main_page(
     Extension(book_state): Extension<WrappedPdfCollection>,
     Extension(stats): Extension<WrappedReadingStatistics>,
 ) -> impl IntoResponse {
+    let main_template = main_page_untemplated(book_state, stats);
+    
+    askama_axum::IntoResponse::into_response(main_page_untemplated)
+}
+
+/// Route for API purposes.
+///
+/// So our TUI client can retrieve the `MainTemplate` without parsing a ton of HTML.
+/// Can also act as a utility route to only get the `MainTemplate` without askama getting in the way.
+pub async fn main_page_untemplated(
+    book_state: WrappedPdfCollection,
+    stats: WrappedReadingStatistics,
+) -> impl IntoResponse {
     let guard = book_state.lock().await;
     let mut pdfs: Vec<Pdf> = guard.pdfs().values().cloned().collect();
     drop(guard);
@@ -55,8 +68,8 @@ pub async fn main_page(
     let today = stats.last_day();
     let week = stats.last_week();
     let month = stats.last_month();
-
-    askama_axum::IntoResponse::into_response(MainTemplate {
+    
+    MainTemplate {
         pdfs,
         today,
         week,
