@@ -17,12 +17,11 @@ use routes::status::status;
 use tokio::time::sleep;
 use tracing::{error, info, metadata::LevelFilter};
 
-mod routes;
 use crate::{
     persistence::DiscState,
     routes::{
         get_pdf::get_pdf,
-        main_page::main_page,
+        main_page::{main_page, main_page_untemplated},
         set_page::set_page,
         static_path::static_path,
         stats::{get_last_day, get_last_month, get_last_week, ReadingStatistics},
@@ -32,7 +31,7 @@ use crate::{
 };
 
 mod persistence;
-
+mod routes;
 mod state;
 
 // TODOS:
@@ -161,6 +160,7 @@ async fn main() -> Result<(), hyper::Error> {
     let dir = directory.clone();
     let app = Router::new()
         .route("/", get(main_page))
+        .route("/api/", get(main_page_untemplated))
         .route("/static/:path", get(static_path))
         .route("/view/:pdf", get(view_pdf))
         .route("/view/:pdf/set_page", post(set_page))
