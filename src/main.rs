@@ -1,4 +1,11 @@
-use std::{fs::OpenOptions, net::SocketAddr, path::PathBuf, process::exit};
+use std::{
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::ErrorKind,
+    net::SocketAddr,
+    path::PathBuf,
+    process::exit,
+};
 use tokio::time::Duration;
 
 use axum::{
@@ -10,21 +17,21 @@ use routes::status::status;
 use tokio::time::sleep;
 use tracing::{error, info, metadata::LevelFilter};
 
-mod routes;
 use crate::{
     persistence::DiscState,
     routes::{
         get_pdf::get_pdf,
-        main_page::main_page,
+        main_page::{main_page, main_page_untemplated},
         set_page::set_page,
         static_path::static_path,
-        stats::{get_last_day, get_last_month, get_last_week},
+        stats::{get_last_day, get_last_month, get_last_week, ReadingStatistics},
         view_pdf::view_pdf,
     },
+    state::PdfCollection,
 };
 
 mod persistence;
-
+mod routes;
 mod state;
 
 // TODOS:
@@ -90,7 +97,28 @@ async fn main() -> Result<(), hyper::Error> {
     let fd = OpenOptions::new()
         .read(true)
         .open(&state_location)
-        .expect(&format!("Failed to open {state_location:?}"));
+        .unwrap_or_else(|error| {
+            if let ErrorKind::NotFound = error.kind() {
+                tracing::error!("Failed to open {state_location:?}, creating file now!");
+
+                // Initialize the file with a basic state if it does not exist.
+                // First creates the file and writes to it, then reopens it and
+                // returns the file descriptor.
+                let dummy_state = DiscState {
+                    pdfs: PdfCollection {
+                        pdfs: HashMap::new(),
+                    },
+                    reading_history: ReadingStatistics::new(),
+                };
+
+                let f = File::create(&state_location).unwrap();
+                serde_json::to_writer_pretty(f, &dummy_state).unwrap();
+                OpenOptions::new().read(true).open(&state_location).unwrap()
+            } else {
+                // Panic if its a error not related to the state file being AWOL.
+                panic!("{error}");
+            }
+        });
 
     let disc_state: DiscState =
         serde_json::from_reader(fd).expect(format!("Could not parse {state_location:?}").as_str());
@@ -132,6 +160,7 @@ async fn main() -> Result<(), hyper::Error> {
     let dir = directory.clone();
     let app = Router::new()
         .route("/", get(main_page))
+        .route("/api/", get(main_page_untemplated))
         .route("/static/:path", get(static_path))
         .route("/view/:pdf", get(view_pdf))
         .route("/view/:pdf/set_page", post(set_page))
