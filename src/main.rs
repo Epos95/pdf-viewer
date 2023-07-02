@@ -12,7 +12,7 @@ use axum::{
     routing::{get, post},
     Extension, Router,
 };
-use clap::{arg, command};
+use clap::{arg, command, value_parser, Arg, ArgAction};
 use routes::status::status;
 use tokio::time::sleep;
 use tracing::{error, info, metadata::LevelFilter};
@@ -44,15 +44,13 @@ mod state;
 //       files into many pdfs and then use imagemagicks' convert tool (convert in.pdf out.jpg)
 //       to create a jpg for each page. This does however take alot of time to do for larger pdfs
 //       to make it work great wed need to only run it on start or something like that
-//
-// TODO: a better index page with more info
 
 #[tokio::main]
 async fn main() -> Result<(), hyper::Error> {
     let matches = command!()
         .arg(arg!(debug: -d --debug      "Toggles debug output"))
         .arg(arg!(-p --port [port] "The port number to host the server on. (defaults to 4000)"))
-        .arg(arg!([dir] "Which directory to host (defaults to \"contents\")"))
+        .arg(Arg::new("dir").action(ArgAction::Append).value_parser(value_parser!(PathBuf)).short('c').help("Which directory to host (defaults to \"contents\""))
         .arg(arg!(-s --state [state] "The location to store the state.json file (defaults to ~/.state.json"))
         .get_matches();
 
@@ -76,10 +74,10 @@ async fn main() -> Result<(), hyper::Error> {
         .parse::<u16>()
         .expect("Invalid argument!");
 
-    let directory = matches
-        .get_one::<PathBuf>("dir")
-        .unwrap_or(&PathBuf::from("content"))
-        .to_owned();
+    let content: Vec<PathBuf> = matches
+        .get_many::<PathBuf>("dir")
+        .map(|inner| inner.cloned().collect())
+        .unwrap_or(vec![PathBuf::from("content")]);
 
     let home = dirs::home_dir().expect("Failed to get home directory???");
     let state_location = PathBuf::from(
@@ -93,7 +91,6 @@ async fn main() -> Result<(), hyper::Error> {
     );
 
     // TODO: Convert this to tokio::OpenOptions eventually
-    // TODO: Have this create file if specified and it does not exist
     let fd = OpenOptions::new()
         .read(true)
         .open(&state_location)
@@ -135,12 +132,12 @@ async fn main() -> Result<(), hyper::Error> {
         w.update();
     }
     let read_dummy = read_stats.clone();
-    let dir = directory.clone();
+    let cloned_content = content.clone();
     tokio::spawn(async move {
         loop {
             sleep(Duration::new(2, 0)).await;
             if let Err(e) = persistence::sync_state(
-                dir.clone(),
+                cloned_content.clone(),
                 dummy_location.clone(),
                 dummy.clone(),
                 read_dummy.clone(),
@@ -157,7 +154,6 @@ async fn main() -> Result<(), hyper::Error> {
         }
     });
 
-    let dir = directory.clone();
     let app = Router::new()
         .route("/", get(main_page))
         .route("/api/", get(main_page_untemplated))
@@ -170,14 +166,13 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/stats/last_month", get(get_last_month))
         .route("/stats/last_week", get(get_last_week))
         .layer(Extension(read_stats))
-        .layer(Extension(dir))
         .layer(Extension(state));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     info!("Successfully started!");
     info!("Listening on addres: {addr}");
-    info!("Looking in {} for pdfs to host.", directory.display());
+    info!("Looking in {:?} for pdfs to host.", content);
     info!("Found state.json at {}", state_location.display());
 
     axum::Server::bind(&addr)

@@ -2,7 +2,7 @@ default:
 	@just --list
 
 tui command:
-	cargo {{command}} --manifest-path pdf-tui/Cargo.toml
+	cargo {{command}} --bin pdf-tui
 
 server command:
-	cargo {{command}}
+	cargo {{command}} --bin pdf-viewer

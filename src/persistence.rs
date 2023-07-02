@@ -5,9 +5,9 @@
 // so that new pdfs can be appended at runtime
 
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
+use std::{error::Error, ffi::OsStr};
 use tokio::fs::read_dir;
 
 use crate::{
@@ -26,27 +26,34 @@ pub struct DiscState {
 /// Syncs the state in memory with the state on disk.
 /// Should run in the background continously.
 pub async fn sync_state(
-    content_dir: PathBuf,
+    content_dirs: Vec<PathBuf>,
     state_location: PathBuf,
     pdfs: WrappedPdfCollection,
     reading_history: WrappedReadingStatistics,
 ) -> Result<(), Box<dyn Error>> {
     // check `content_dir` for pdfs not in `state` and add them
     let mut state_ref = pdfs.lock().await;
-    let mut files = read_dir(content_dir).await?;
 
-    // TODO: Remove things from the state which are NOT within the directory.
-    // TODO: This runs in O(n * m) time, could we do it more efficient?
-    while let Ok(Some(f)) = files.next_entry().await {
-        let name = f.file_name().into_string().unwrap();
-        let path = f.path();
+    for content_dir in content_dirs {
+        let mut files = read_dir(content_dir).await?;
 
-        if !state_ref.has_book(&name.split('.').next().unwrap()) {
-            tracing::info!("Added new book {path:?}");
-            let doc = Pdf::new(path);
-            state_ref.add_book(doc);
+        // TODO: Remove things from the state which are NOT within the directory.
+        while let Ok(Some(f)) = files.next_entry().await {
+            if f.path().extension() != Some(OsStr::new("pdf")) {
+                continue;
+            }
+
+            let name = f.file_name().into_string().unwrap();
+            let path = f.path();
+
+            if !state_ref.has_book(&name.split('.').next().unwrap()) {
+                tracing::info!("Added new book {path:?}");
+                let doc = Pdf::new(path);
+                state_ref.add_book(doc);
+            }
         }
     }
+
     drop(state_ref);
 
     // write state to file
