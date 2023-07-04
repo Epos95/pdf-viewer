@@ -11,6 +11,7 @@ server command +ARGS="":
 
 # Run the server in a docker image
 docker_run:
+	docker run --name pdf-viewer -d -p 3000:3000 -v state:/state_dir -v "$(pwd)"/content/:/content pdf-viewer
 
 # Create a docker image
 docker_build:

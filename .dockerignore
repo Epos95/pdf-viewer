@@ -3,3 +3,9 @@ Dockerfile
 .dockerignore
 .git
 .gitignore
+pdf-tui/*
+new_state.json
+justfile
+README.md
+state.json
+content

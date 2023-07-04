@@ -166,6 +166,7 @@ async fn main() -> Result<(), hyper::Error> {
         .route("/stats/last_month", get(get_last_month))
         .route("/stats/last_week", get(get_last_week))
         .layer(Extension(read_stats))
+        .layer(Extension(content.clone()))
         .layer(Extension(state));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
