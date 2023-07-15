@@ -21,8 +21,11 @@ pub async fn set_page(
     Extension(state): Extension<WrappedReadingStatistics>,
 ) -> impl IntoResponse {
     let mut g = pdfs.lock().await;
-    let old_page = match g.get_book_by_name(&json.pdf_name) {
-        Some(b) => b.current_page(),
+    let old_page = match g.get_book_by_name_mut(&json.pdf_name) {
+        Some(b) => {
+            b.access();
+            b.current_page()
+        }
         None => {
             error!("Request for page on non-existent content: {pdf}");
             return Err("Request for page on non-existent content: {pdf}");

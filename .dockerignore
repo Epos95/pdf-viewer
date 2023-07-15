@@ -9,3 +9,4 @@ justfile
 README.md
 state.json
 content
+old_content
