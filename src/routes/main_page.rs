@@ -1,9 +1,10 @@
 use askama::Template;
 use axum::{response::IntoResponse, Extension, Json};
+use chrono::NaiveDateTime;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-use crate::state::{Pdf, WrappedPdfCollection};
+use crate::state::{AccessTime, Pdf, WrappedPdfCollection};
 
 use super::stats::WrappedReadingStatistics;
 
@@ -69,7 +70,22 @@ async fn get_template(
     let mut pdfs: Vec<Pdf> = guard.pdfs().values().cloned().collect();
     drop(guard);
 
-    pdfs.sort_by_key(|a| a.total_pages());
+    pdfs.sort_by(|a, b| {
+        let first = if let AccessTime::Once(t) = a.last_access() {
+            NaiveDateTime::parse_from_str(t, "%Y-%m-%d %H:%M:%S").unwrap_or_default()
+        } else {
+            NaiveDateTime::default()
+        };
+
+        let second = if let AccessTime::Once(t) = b.last_access() {
+            NaiveDateTime::parse_from_str(t, "%Y-%m-%d %H:%M:%S").unwrap_or_default()
+        } else {
+            NaiveDateTime::default()
+        };
+
+        second.cmp(&first)
+    });
+
     let stats = stats.lock().await;
     let today = stats.last_day();
     let week = stats.last_week();
